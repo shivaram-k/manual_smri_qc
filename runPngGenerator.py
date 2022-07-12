@@ -21,7 +21,7 @@ def checkSliceHasTissue(brainSlice):
     totalPixels = len(brainSlice)*len(brainSlice[0])
     nonzeroPixels = np.count_nonzero(brainSlice)
     
-    if (nonzeroPixels >= 0.1*totalPixels):
+    if (nonzeroPixels >= 0.05*totalPixels):
         return True
     else:
         return False
@@ -52,17 +52,35 @@ def selectBrainSlices(fn):
 
     # Dimension 0
     dim0Slices = selectSliceIndices(dim0MinBrain, dim0MaxBrain)
+    k = 1
     while not all([checkSliceHasTissue(img[i, :, :]) for i in dim0Slices]):
+        print("Regenerating dim0 slices")
+        if k % 5 == 0:
+            dim0MinBrain += 1
+            dim0MaxBrain -= 1
+        k += 1
         dim0Slices = selectSliceIndices(dim0MinBrain, dim0MaxBrain)
 
     # Dimension 1
     dim1Slices = selectSliceIndices(dim1MinBrain, dim1MaxBrain)
+    k = 1
     while not all([checkSliceHasTissue(img[:, i, :]) for i in dim1Slices]):
+        print("Regenerating dim1 slices")
+        if k % 5 == 0:
+            dim1MinBrain += 1
+            dim1MaxBrain -= 1
+        k += 1
         dim1Slices = selectSliceIndices(dim1MinBrain, dim1MaxBrain)
 
     # Dimension 2
     dim2Slices = selectSliceIndices(dim2MinBrain, dim2MaxBrain)
+    k = 1
     while not all([checkSliceHasTissue(img[:, :, i]) for i in dim2Slices]):
+        print("Regenerating dim2 slices")
+        if k % 5 == 0:
+            dim2MinBrain += 1
+            dim2MaxBrain -= 1
+        k += 1
         dim2Slices = selectSliceIndices(dim2MinBrain, dim2MaxBrain)
 
     return [dim0Slices, dim1Slices, dim2Slices]
@@ -126,17 +144,14 @@ def generatePngsSingleScan(FS_folder, subject, outputDir):
 
     with open(cmd_file_x, 'w') as f:
         sj_cmd_x += ' -quit \n '
-        print(sj_cmd_x)
         f.write(sj_cmd_x)
         
     with open(cmd_file_y, 'w') as f:
         sj_cmd_y += ' -quit \n '
-        print(sj_cmd_y)
         f.write(sj_cmd_y)
         
     with open(cmd_file_z, 'w') as f:
         sj_cmd_z += ' -quit \n '
-        print(sj_cmd_z)
         f.write(sj_cmd_z)
 
     sb.call(freeview_command.format(cmd=cmd_file_x), shell=True)
@@ -149,8 +164,8 @@ def generatePngsSingleScan(FS_folder, subject, outputDir):
 
 def main():
     subjDir = "/Users/youngjm/Data/clip/images/derivatives/mpr_fs_reconall_6.0.0/"
-    fn = '/Users/youngjm/Data/chop-nf1/nf1_mpr_fs_reconall_6.0.0_structural_stats.csv'
-    outputDir = "/Users/youngjm/Data/chop-nf1/derivatives/qc_mpr_fs_6.0.0/pngs"
+    fn = '/Users/youngjm/Data/clip/images/derivatives/mpr_fs_reconall_6.0.0_tables/mpr_fs_reconall_6.0.0_structural_stats.csv'
+    outputDir = "/Users/youngjm/Data/clip/images/qc/mpr_fs_6.0.0/pngs"
 
     df = pd.read_csv(fn)
     
@@ -159,12 +174,17 @@ def main():
     
     # For each scan
     for scanId in scanIds:
+        
         # Identify the complete path to the scan
         subj = scanId.split("_")[0]
         ses = scanId.split("_")[1]
-    
-        scanPath = subjDir+subj+"/"+ses+"/anat/"+scanId+"/"
-        generatePngsSingleScan(scanPath, subj, outputDir)
+
+        # if there are already pngs for the scan
+        existingPngs = glob.glob(os.path.join(outputDir, subj+"_"+ses+"*.png"))
+        if len(existingPngs) < 9:
+            print("generating image slices for", subj, ses)
+            scanPath = subjDir+subj+"/"+ses+"/anat/"+scanId+"/"
+            generatePngsSingleScan(scanPath, subj+"_"+ses, outputDir)
 
 
 if __name__ == "__main__":
