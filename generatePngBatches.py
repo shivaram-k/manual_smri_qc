@@ -6,7 +6,9 @@ import random
 baseDir = "/Users/youngjm/Data/clip/images/qc/mpr_fs_6.0.0/"
 # Assuming 5 seconds per png and 9 pngs per scan, ~1 minute per scan
 # Keeping the batch to ~30 minute period, want 30 scans per batch
-numPngsPerBatch = 9*30 
+# After modifying the qc tool to show all 3 scans from the same view at once, the previous batch size (9*30) took 9 minutes
+#   As a result, multiplying by 3
+numPngsPerBatch = 9*30*3
 
 # Get the paths for the images 
 imgs = sorted(os.listdir(baseDir+"pngs/"))
@@ -46,7 +48,7 @@ while len(assignedSubjects) < len(subjects):
 
     # When the batch is full
     # move the files from baseDir + png/ to baseDir + batc - how am I keeping track of batch ids? Maybe each batch gets 2 4 digit ids? batch_0000_0001 
-    outDir = baseDir+"batch_0000_"+str(batchId).zfill(4)+"/"
+    outDir = baseDir+"batch_"+str(batchId).zfill(4)+"/"
     print(outDir)
     # If the outdir doesn't exist make it
     if not os.path.exists(outDir):
