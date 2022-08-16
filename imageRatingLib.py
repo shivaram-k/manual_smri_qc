@@ -53,10 +53,7 @@ def setBatchGrading(baseDir, batch, ratingDfFn, raterName):
         
     
     # Check if the .csv to hold the image grades exists
-    if os.path.exists(ratingDfFn):
-        ratingDf = pd.read_csv(ratingDfFn)
-    # If the rating file doesn't exist, set up the columns
-    else:
+    if not os.path.exists(ratingDfFn):
         setup = {"batch": [batch for i in range(len(fns))],
                 "png_filename": fns, 
                 "subject": [i.split("_")[0] for i in fns], 
@@ -64,9 +61,58 @@ def setBatchGrading(baseDir, batch, ratingDfFn, raterName):
                 "rater": [raterName for i in range(len(fns))], 
                 "rater_grades": [np.nan for i in range(len(fns))]}
         ratingDf = pd.DataFrame(setup)
+        ratingDf.to_csv(ratingDfFn, index=False)
+
         
-    return viewFnsDict, ratingDf
+    return viewFnsDict
+
+##
+# Update batch status to completed
+def markBatchAsComplete(batchOrderFn, nextBatch):
+    batchStatusDf = pd.read_csv(batchOrderFn)
+    batchStatusDf.loc[batchStatusDf['batch_id'] == nextBatch, 'batch_rating_complete'] = True
+    batchStatusDf.to_csv(batchOrderFn, index=False)
+
 
 ##
 # Rate the pngs for a single view
 # @param viewFs
+def rateBatchOfPngs(ratingDfFn, viewFnsDict, nextBatch, baseDir):
+    ratingDf = pd.read_csv(ratingDfFn)
+    # The scan rating counter = the number of the scan the user is currently rating
+    scanRatingCounter = len(ratingDf[(ratingDf['batch'] == nextBatch) & (ratingDf['rater_grades'].notna())]['rater_grades'])+1
+    # for each subject
+    for scanView in viewFnsDict:
+        # Get the filenames
+        viewFns = viewFnsDict[scanView]
+        # display progress
+        print("Rating view " + str(scanRatingCounter) + " of " + str(len(viewFnsDict)) + " unique views")
+        print("(FYI age at scan: approximately " +str(np.round(int(scanView.split("age")[-1].split('_')[0])/365.25, 2))+" years)")
+
+        # load all 3 pngs
+        img0 = plt.imread(os.path.join(os.path.join(baseDir, nextBatch), viewFns[0]))
+        img1 = plt.imread(os.path.join(os.path.join(baseDir, nextBatch), viewFns[1]))
+        img2 = plt.imread(os.path.join(os.path.join(baseDir, nextBatch), viewFns[2]))
+        viewImg = np.concatenate([img0, img1, img2], axis=1)
+        figsize = (len(viewImg)/10, len(viewImg[0])/20)
+
+        # display the png
+        plt.figure(figsize=figsize)
+        plt.imshow(viewImg)
+        plt.show()
+
+        # ask for a rating
+        rating = ""
+        while rating not in [0, 1, 2, -1]:
+            rating = int(input("Grade the image on a scale of 0/1/2/-1 (aka poor quality/not sure/good quality/not a precontrast brain image): "))
+
+        # add the rating to the dataframe
+        ratingDf.loc[ratingDf['png_filename'] == viewFns[0], 'rater_grades'] = rating
+        ratingDf.loc[ratingDf['png_filename'] == viewFns[1], 'rater_grades'] = rating
+        ratingDf.loc[ratingDf['png_filename'] == viewFns[2], 'rater_grades'] = rating
+
+        scanRatingCounter += 1
+        # clear the screen
+        clear_output()
+        # save the dataframe
+        ratingDf.to_csv(ratingDfFn, index=False)
