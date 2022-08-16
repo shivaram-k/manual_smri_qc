@@ -1,6 +1,7 @@
 import os
 import shutil
 import random
+import numpy as np
 
 # Variables to change
 baseDir = "/Users/youngjm/Data/clip/images/qc/mpr_fs_6.0.0/"
@@ -8,58 +9,72 @@ baseDir = "/Users/youngjm/Data/clip/images/qc/mpr_fs_6.0.0/"
 # Keeping the batch to ~30 minute period, want 30 scans per batch
 # After modifying the qc tool to show all 3 scans from the same view at once, the previous batch size (9*30) took 9 minutes
 #   As a result, multiplying by 3
-numPngsPerBatch = 9*30*3
+numPngsPerBatch = 9*30*3  # units = pngs
 
 # Get the paths for the images 
 imgs = sorted(os.listdir(baseDir+"pngs/"))
 imgs = [ i for i in imgs if "sub" in i ]
 
+# Get the number of batches needed
+numBatches = int(np.ceil(float(len(imgs))/numPngsPerBatch))
+
 # Get the subjects with session ids from the list of images
 subjects = list(set([i.split("_dim")[0] for i in imgs]))
-random.shuffle(subjects)
 
-# Set up variables
-batchFiles = []
-assignedSubjects = []
-# Assumption: batch generation is done once and is not expected to resume from a previous state
-batchId = 1
-subjIdx = 0
+# Separate subjects out into age groups
+group0to2 = []
+group2to5 = []
+group5to10 = []
+group10up = []
 
-# while there are subjects who have not been assigned to a batch
-while len(assignedSubjects) < len(subjects):
-    # fill a batch with subject pngs
-    print("batch start")
-    # While there are still spaces left in the batch and scans left to assign
-    while len(batchFiles) < numPngsPerBatch and subjIdx < len(subjects):
-        if subjects[subjIdx] not in assignedSubjects:
-            print(subjects[subjIdx])
-            # Get the ids of the scans belonging to the subject
-            subjImgs = [baseDir+"pngs/"+i for i in imgs if subjects[subjIdx] in i]
-        
-            # Check that there are 9 pngs for the subject
-            assert(len(subjImgs) == 9)
-    
-            # Add the images for that subject to the list of images for the batch
-            batchFiles.extend(subjImgs)   
-            assignedSubjects.append(subjects[subjIdx])
+for s in subjects:
+    # Get the age in days
+    age = int(s.split("age")[-1])
 
-            # Increment the subject idx
-            subjIdx += 1
+    if age < (365.25*2):
+        group0to2.append(s)
+    elif age < (365.25*5):
+        group2to5.append(s)
+    elif age < (365.25*10):
+        group5to10.append(s)
+    else:
+        group10up.append(s)
 
-    # When the batch is full
-    # move the files from baseDir + png/ to baseDir + batc - how am I keeping track of batch ids? Maybe each batch gets 2 4 digit ids? batch_0000_0001 
-    outDir = baseDir+"batch_"+str(batchId).zfill(4)+"/"
-    print(outDir)
+# Shuffle the subject groups
+random.shuffle(group0to2)
+random.shuffle(group2to5)
+random.shuffle(group5to10)
+random.shuffle(group10up)
+
+# Divide each group into the number of batches
+batches0to2 = np.array_split(np.array(group0to2), numBatches)
+batches2to5 = np.array_split(np.array(group2to5), numBatches)
+batches5to10 = np.array_split(np.array(group5to10), numBatches)
+batches10up = np.array_split(np.array(group10up), numBatches)
+
+print(batches0to2)
+
+# Populate the batches
+for i in range(numBatches):
+    # Get the scan ids for the batch
+    scanIds = list(batches0to2[i]) + list(batches2to5[i]) + list(batches5to10[i]) + list(batches10up[i])
+
+    # Generate a complete list of files for the batch
+    batchFiles = []
+
+    for scanId in scanIds:
+        scanPngs = [baseDir + "pngs/" + j for j in imgs if scanId in j]
+        assert(len(scanPngs) == 9)
+        batchFiles.extend(scanPngs)
+
+    # The batch is full after this line
+    # move the files from baseDir + png/ to baseDir + batch 
+    outDir = baseDir+"batch_"+str(i+1).zfill(4)+"/"
     # If the outdir doesn't exist make it
     if not os.path.exists(outDir):
         os.mkdir(outDir)
     # Copy files over to the batch directory
     for fn in batchFiles:
-        print(fn)
         newFn = outDir + fn.split("/")[-1]
         shutil.copyfile(fn, newFn)
-    # Reset variables for next batch
-    batchFiles = []
-    batchId += 1
-        
 
