@@ -106,7 +106,7 @@ def rateBatchOfPngs(ratingDfFn, viewFnsDict, nextBatch, baseDir):
 
         # ask for a rating
         rating = ""
-        while type(rating) is not int and rating not in [0, 1, 2, -1]:
+        while not isintance(rating, int) and rating not in [0, 1, 2, -1]:
             rating = int(input("Grade the image on a scale of 0/1/2/-1 (aka poor quality/not sure/good quality/not a precontrast brain image): "))
 
         # add the rating to the dataframe
