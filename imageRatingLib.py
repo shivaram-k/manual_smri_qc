@@ -1,3 +1,4 @@
+from IPython.display import display, HTML
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -95,6 +96,8 @@ def rateBatchOfPngs(ratingDfFn, viewFnsDict, nextBatch, baseDir):
         img2 = plt.imread(os.path.join(os.path.join(baseDir, nextBatch), viewFns[2]))
         viewImg = np.concatenate([img0, img1, img2], axis=1)
         figsize = (len(viewImg)/10, len(viewImg[0])/20)
+ 
+        display(HTML("<style>.container { width:100% !important; }</style>"))
 
         # display the png
         plt.figure(figsize=figsize)
