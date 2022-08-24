@@ -112,7 +112,6 @@ def rateBatchOfPngs(ratingDfFn, viewFnsDict, nextBatch, baseDir):
                 rating = int(rating)
             except:
                 print("Invalid rating value.")
-                continue
 
             if rating in [0, 1, 2, -1]:
                 break
