@@ -110,7 +110,7 @@ def rateBatchOfPngs(ratingDfFn, viewFnsDict, nextBatch, baseDir):
             if rating in [0, 1, 2, -1]:
                 break
             else:
-                rating = int(input("Grade the image on a scale of 0/1/2/-1 (aka poor quality/not sure/good quality/not a precontrast brain image): "))
+                rating = input("Grade the image on a scale of 0/1/2/-1 (aka poor quality/not sure/good quality/not a precontrast brain image): ")
 
         # add the rating to the dataframe
         ratingDf.loc[ratingDf['png_filename'] == viewFns[0], 'rater_grades'] = rating
