@@ -105,8 +105,15 @@ def rateBatchOfPngs(ratingDfFn, viewFnsDict, nextBatch, baseDir):
         plt.show()
 
         # ask for a rating
-        rating = ""
+        rating = input("Grade the image on a scale of 0/1/2/-1 (aka poor quality/not sure/good quality/not a precontrast brain image): ")
+
         while True:
+            try:
+                rating = int(rating)
+            except:
+                print("Invalid rating value.")
+                continue
+
             if rating in [0, 1, 2, -1]:
                 break
             else:
