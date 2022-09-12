@@ -31,8 +31,12 @@ def getBatchId(raterName, baseDir):
 
     # Get the batch number of the next unrated batch
     batchStatusDf = pd.read_csv(batchOrderFn)
-    nextBatch = batchStatusDf[batchStatusDf['batch_rating_complete'] == False]['batch_id'].values[0]
-    return batchOrderFn, nextBatch
+    if (len(batchStatusDf[batchStatusDf['batch_rating_complete'] == False]) == 0):
+        print("There are no more batches currently available to rate (congrats!)")
+        return batchOrderFn, -1
+    else:
+        nextBatch = batchStatusDf[batchStatusDf['batch_rating_complete'] == False]['batch_id'].values[0]
+        return batchOrderFn, nextBatch
 
 ##
 # Set up the environment for grading the specified batch of images
