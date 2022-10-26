@@ -46,6 +46,9 @@ def getBatchId(raterName, baseDir):
 # @return
 # @return A pandas Dataframe containing information about the ratings for the specified batch
 def setBatchGrading(baseDir, batch, ratingDfFn, raterName):
+
+    print(batch)
+
     # List the file names
     fns = os.listdir(os.path.join(baseDir, batch))
     viewIds = list(set([i.split(".png")[0][:-4] for i in fns])) 
@@ -56,17 +59,24 @@ def setBatchGrading(baseDir, batch, ratingDfFn, raterName):
     for viewId in viewIds:
         viewFnsDict[viewId] = [i for i in fns if viewId in i]
         
-    
+    setup = {"batch": [batch for i in range(len(fns))],
+           "png_filename": fns, 
+           "subject": [i.split("_")[0] for i in fns], 
+           "session": [i.split("_")[1] for i in fns],  
+           "rater": [raterName for i in range(len(fns))], 
+           "rater_grades": [np.nan for i in range(len(fns))]}   
+    ratingDf = pd.DataFrame(setup)
+
     # Check if the .csv to hold the image grades exists
     if not os.path.exists(ratingDfFn):
-        setup = {"batch": [batch for i in range(len(fns))],
-                "png_filename": fns, 
-                "subject": [i.split("_")[0] for i in fns], 
-                "session": [i.split("_")[1] for i in fns],  
-                "rater": [raterName for i in range(len(fns))], 
-                "rater_grades": [np.nan for i in range(len(fns))]}
-        ratingDf = pd.DataFrame(setup)
+        print("Setting up the .csv, doesn't exist")
         ratingDf.to_csv(ratingDfFn, index=False)
+    else:
+        # Case: the ratings file already exists
+        print("Adding to existing .csv file")
+        existingDf = pd.read_csv(ratingDfFn)
+        existingDf = pd.concat([existingDf, ratingDf], axis=0, ignore_index=True)
+        existingDf.to_csv(ratingDfFn, index=False)
 
         
     return viewFnsDict
@@ -84,6 +94,7 @@ def markBatchAsComplete(batchOrderFn, nextBatch):
 # @param viewFs
 def rateBatchOfPngs(ratingDfFn, viewFnsDict, nextBatch, baseDir):
     ratingDf = pd.read_csv(ratingDfFn)
+    print(ratingDf.shape)
     # The scan rating counter = the number of the scan the user is currently rating
     scanRatingCounter = len(ratingDf[(ratingDf['batch'] == nextBatch) & (ratingDf['rater_grades'].notna())]['rater_grades'])+1
     # for each subject
