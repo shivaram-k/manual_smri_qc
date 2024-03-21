@@ -9,7 +9,6 @@ import sys
 import argparse
 import nibabel as nib
 
-
 def selectSliceIndices(brainMin, brainMax):
     randRange = int(round((brainMax - brainMin)*0.05))
     # Get the slices for each dimension
@@ -21,11 +20,11 @@ def selectSliceIndices(brainMin, brainMax):
 
 
 def checkSliceHasTissue(brainSlice):
-    # Make sure at least 10% of the brainSlice is actually not brain
+    # Make sure at least 10% of the brainSlice is actually brain
     totalPixels = len(brainSlice)*len(brainSlice[0])
     nonzeroPixels = np.count_nonzero(brainSlice)
     
-    if (nonzeroPixels >= 0.07*totalPixels):
+    if (nonzeroPixels >= 0.1*totalPixels):
         return True
     else:
         return False
@@ -43,9 +42,15 @@ def selectBrainSlices(fn):
 
     # Goal: identify volume of brain that's non-zero
     # Get the upper and lower bounds of brain in each dimension
+    # This order of coordinates works with LAS+ orientation
     dim0Lims = np.where(img.any(axis=(1, 2)))[0]
     dim1Lims = np.where(img.any(axis=(0, 2)))[0]
     dim2Lims = np.where(img.any(axis=(0, 1)))[0]
+    # LIES - This order of coordinates works with PSR+ orientations  
+#    dim1Lims = np.where(img.any(axis=(1, 2)))[0]
+#    dim2Lims = np.where(img.any(axis=(0, 2)))[0]
+#    dim0Lims = np.where(img.any(axis=(0, 1)))[0]
+
 
     # Get the min and max of each dimension
     dim0MinBrain = sorted(set(dim0Lims))[0]
@@ -70,7 +75,6 @@ def selectBrainSlices(fn):
             dim0MaxBrain -= 1
         k += 1
         dim0Slices = selectSliceIndices(dim0MinBrain, dim0MaxBrain)
-    #dim0MidBrain = (dim0MinBrain + dim0MaxBrain) // 2
     
     # Dimension 1
     dim1Slices = selectSliceIndices(dim1MinBrain, dim1MaxBrain)
@@ -102,11 +106,18 @@ def selectBrainSlices(fn):
 def generatePngsSingleScan(mprFn, subject, outputDir):
     freeview_command = 'freeview -cmd {cmd} '
     cmd_txt = """ -v {anatomy}:grayscale=10,500  """
+ 
+#    # This order of coordinates works with LAS+ orientations
+#    dim0_slice = ' -slice {xpos} {ymid} {zmid} \n -ss {opfn} \n  '  
+#    dim1_slice = ' -slice {xmid} {ypos} {zmid} \n -ss {opfn} \n  '  
+#    dim2_slice = ' -slice {xmid} {ymid} {zpos} \n -ss {opfn} \n  '  
 
-    # To step through the sagittal slices this is added for every slice. 
-    dim0_slice = ' -slice {xpos} {ymid} {zmid} \n -ss {opfn} \n  '  
-    dim1_slice = ' -slice {xmid} {xpos} {zmid} \n -ss {opfn} \n  '  
-    dim2_slice = ' -slice {xmid} {ymid} {xpos} \n -ss {opfn} \n  '  
+    # This order of coordinates works with PRS+ orientations
+    dim0_slice = ' -slice {ymid} {zmid} {xpos} \n -ss {opfn} \n  '  
+    dim1_slice = ' -slice {ypos} {zmid} {xmid} \n -ss {opfn} \n  '  
+    dim2_slice = ' -slice {ymid} {zpos} {xmid} \n -ss {opfn} \n  '  
+
+
 
     # Set up variables 
 #    mprFn = os.path.join(FS_folder, 'mri', 'norm.mgz')          # Want to use the images without the face
@@ -141,7 +152,7 @@ def generatePngsSingleScan(mprFn, subject, outputDir):
     for dim1Slice in brainSlices[1]:
         sj_cmd_y += dim1_slice.format(
             xmid = brainMids[0],
-            xpos=dim1Slice,
+            ypos=dim1Slice,
             zmid = brainMids[2],
             opfn=os.path.join(target_directory, subject+"_dim1_"+str(
                 dim1Slice).zfill(3) + '.png')
@@ -151,7 +162,7 @@ def generatePngsSingleScan(mprFn, subject, outputDir):
         sj_cmd_z += dim2_slice.format(
             xmid = brainMids[0],
             ymid = brainMids[1],
-            xpos=dim2Slice,
+            zpos=dim2Slice,
             opfn=os.path.join(target_directory, subject+"_dim2_"+str(
                 dim2Slice).zfill(3) + '.png') 
         ) 
@@ -168,6 +179,7 @@ def generatePngsSingleScan(mprFn, subject, outputDir):
         sj_cmd_z += ' -quit \n '
         f.write(sj_cmd_z)
 
+    os.system("module load FreeSurfer/7.1.1")
     sb.call(freeview_command.format(cmd=cmd_file_x), shell=True)
     sb.call(freeview_command.format(cmd=cmd_file_y), shell=True)
     sb.call(freeview_command.format(cmd=cmd_file_z), shell=True)
@@ -175,62 +187,65 @@ def generatePngsSingleScan(mprFn, subject, outputDir):
     print("PNGs generated for", subject)
 
 def main():
-	parser = argparse.ArgumentParser()
-	parser.add_argument('-i', '--input-dir', help='Path to input BIDS directory') 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input-dir', help='Path to and including input BIDS directory')
+    parser.add_argument('-o', '--output-dir', help='Path to output directory for QC PNG storage')
   
-	args = parser.parse_args()
-	inDir = args.input_dir
-	
-	# Load freesurfer
-	# module("load", "FreeSurfer/7.1.1")  ----> Does not work!
-	
-	# --- Output directory --- 
-	outBase = "/home/gudapatis/SLIP_QC/pngOutputs"
-	if not os.path.exists(outBase):
-		os.makedirs(outBase)
-		
-	# --- Read participants.tsv ---
-	demoPath = os.path.join(inDir, "participants.tsv")
-	
-	# Exit if participants.tsv not present
-	if not os.path.exists(demoPath):
-		print("Not a valid BIDS directory. Missing participants.tsv")
-		sys.exit(1)
+    args = parser.parse_args()
+    inDir = args.input_dir
+    
+    # Load freesurfer
+    # module("load", "FreeSurfer/7.1.1")  #----> Does not work!
+    
+    # --- Output directory --- 
+    # outBase = "/home/gudapatis/SLIP_QC/pngOutputs"
+    outBase = args.output_dir
+    if not os.path.exists(outBase):
+        os.makedirs(outBase)
+        
+    # --- Read participants.tsv ---
+    demoPath = os.path.join(inDir, "participants.tsv")
+    
+    # Exit if participants.tsv not present
+    if not os.path.exists(demoPath):
+        print("Not a valid BIDS directory. Missing participants.tsv")
+        sys.exit(1)
 
-	demoDf = pd.read_csv(demoPath, sep="\t")
-	
-	# --- Get a list of subject IDs ---
-	subIDs = [sub for sub in os.listdir(inDir) if "sub-" in sub]
-	
-	for subID in subIDs:
-		# Full path to subject directory
-		subPath = os.path.join(inDir, subID)
-		# List of sessions
-		sesIDs = [ses for ses in os.listdir(subPath) if "ses-" in ses]
-		
-		for sesID in sesIDs:
-			sesPath = os.path.join(subPath, sesID)
-			anatPath = os.path.join(sesPath, "anat")
-			
-			# Check if session has anat folder
-			if not os.path.exists(anatPath):
-				continue
-			# Get the list of niftis in the anat folder
-			scans = [scan for scan in os.listdir(anatPath) if ".nii" in scan]
-			
-			for scan in scans:
-				scanID = scan.split(".nii")[0]
-				scanPath = os.path.join(anatPath, scan)
-				# Output directory
-				outDir = os.path.join(outBase, scanID)
-				if not os.path.exists(outDir):
-					os.makedirs(outDir)
-					
-				# If there are already pngs for the scan
-				existingPngs = glob.glob(outDir + "/*.png")
-				if len(existingPngs) < 9:
-					print("Generating Image Slices for", scanID)
-					generatePngsSingleScan(scanPath, scanID, outDir)
+    demoDf = pd.read_csv(demoPath, sep="\t")
+    
+    # --- Get a list of subject IDs ---
+    subIDs = [sub for sub in os.listdir(inDir) if "sub-" in sub]
+    
+    for subID in subIDs:
+        # Full path to subject directory
+        subPath = os.path.join(inDir, subID)
+        # List of sessions
+        sesIDs = [ses for ses in os.listdir(subPath) if "ses-" in ses]
+        
+        for sesID in sesIDs:
+           sesPath = os.path.join(subPath, sesID)
+           anatPath = os.path.join(sesPath, "anat")
+           
+           # Check if session has anat folder
+           if not os.path.exists(anatPath):
+               continue
+           # Get the list of niftis in the anat folder
+           scans = [scan for scan in os.listdir(anatPath) if ".nii" in scan and "MPR" in scan]
+           
+           for scan in scans:
+               scanID = scan.split(".nii")[0]
+               print(subID, sesID, scanID)
+               scanPath = os.path.join(anatPath, scan)
+               # Output directory
+               outDir = os.path.join(outBase, scanID)
+               if not os.path.exists(outDir):
+                   os.makedirs(outDir)
+                   
+               # If there are already pngs for the scan
+               existingPngs = glob.glob(outDir + "/*.png")
+               if len(existingPngs) < 9:
+                   print("Generating Image Slices for", scanID)
+                   generatePngsSingleScan(scanPath, scanID, outDir)
 
 
 if __name__ == "__main__":
