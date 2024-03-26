@@ -7,7 +7,7 @@ import pandas as pd
 import sys
 import argparse
 import json
-import nibabel as nib
+import nibabel
 from nilearn import plotting
 from nilearn.image import coord_transform
 
@@ -32,11 +32,7 @@ def checkSliceHasTissue(brainSlice):
         return False
 
 
-def selectNewSliceCoordinates(fn):
-    # Load the masked brain image
-    nibImg = nibabel.load(fn)
-    img = nibImg.get_fdata()
-
+def selectNewSliceCoordinates(img):
     # Goal: identify volume of brain that's non-zero
     # Get the upper and lower bounds of brain in each dimension
     dim0Lims = np.where(img.any(axis=(1, 2)))[0]
@@ -86,93 +82,35 @@ def selectNewSliceCoordinates(fn):
         k += 1
         dim2Slices = selectSliceIndices(dim2MinBrain, dim2MaxBrain)
     
-    return [dim0Slices, dim1Slices, dim2Slices], nibImg.affine
+    return [dim0Slices, dim1Slices, dim2Slices]
 
-
-
-def selectBrainSlices(fn):
-    # Load the masked brain image
-    nibImg = nibabel.load(fn)
-    img = nibImg.get_fdata()
-
-    # # What volumes do we want?
-    # # Third dim: 0 is back of head? max is front of head? AP view
-    # # Second dim: coronal, 0 is top and max is bottom of skull
-    # # First dim: sagittal? LR
-
-    # Goal: identify volume of brain that's non-zero
-    # Get the upper and lower bounds of brain in each dimension
-    # This order of coordinates works with LAS+ orientation
-    dim0Lims = np.where(img.any(axis=(1, 2)))[0]
-    dim1Lims = np.where(img.any(axis=(0, 2)))[0]
-    dim2Lims = np.where(img.any(axis=(0, 1)))[0]
-
-    # Get the min and max of each dimension
-    dim0MinBrain = sorted(set(dim0Lims))[0]
-    dim0MaxBrain = sorted(set(dim0Lims))[-1]
-    dim0MidBrain = (dim0MinBrain + dim0MaxBrain) // 2
-    
-    dim1MinBrain = sorted(set(dim1Lims))[0]
-    dim1MaxBrain = sorted(set(dim1Lims))[-1]
-    dim1MidBrain = (dim1MinBrain + dim1MaxBrain) // 2
-    
-    dim2MinBrain = sorted(set(dim2Lims))[0]
-    dim2MaxBrain = sorted(set(dim2Lims))[-1]
-    dim2MidBrain = (dim2MinBrain + dim2MaxBrain) // 2
-
-    # Dimension 0
-    dim0Slices = selectSliceIndices(dim0MinBrain, dim0MaxBrain)
-    k = 1
-    while not all([checkSliceHasTissue(img[i, :, :]) for i in dim0Slices]):
-        print("Regenerating dim0 slices")
-        if k % 5 == 0:
-            dim0MinBrain += 1
-            dim0MaxBrain -= 1
-        k += 1
-        dim0Slices = selectSliceIndices(dim0MinBrain, dim0MaxBrain)
-    
-    # Dimension 1
-    dim1Slices = selectSliceIndices(dim1MinBrain, dim1MaxBrain)
-    k = 1
-    while not all([checkSliceHasTissue(img[:, i, :]) for i in dim1Slices]):
-        print("Regenerating dim1 slices")
-        if k % 5 == 0:
-            dim1MinBrain += 1
-            dim1MaxBrain -= 1
-        k += 1
-        dim1Slices = selectSliceIndices(dim1MinBrain, dim1MaxBrain)
-    #dim1MidBrain = (dim1MinBrain + dim1MaxBrain) // 2
-    
-    # Dimension 2
-    dim2Slices = selectSliceIndices(dim2MinBrain, dim2MaxBrain)
-    k = 1
-    while not all([checkSliceHasTissue(img[:, :, i]) for i in dim2Slices]):
-        print("Regenerating dim2 slices")
-        if k % 5 == 0:
-            dim2MinBrain += 1
-            dim2MaxBrain -= 1
-        k += 1
-        dim2Slices = selectSliceIndices(dim2MinBrain, dim2MaxBrain)
-    #dim2MidBrain = (dim2MinBrain + dim2MaxBrain) // 2
-    
-    return [dim0Slices, dim1Slices, dim2Slices], [dim0MidBrain, dim1MidBrain, dim2MidBrain]
 
 def generatePngsSingleScanNibabel(mprFn, subject, outputDir):
-    brainSlices, affine = selectBrainSlices(mprFn)
+    # Load the masked brain image
+    nibImg = nibabel.load(mprFn)
+    img = nibImg.get_fdata()
+    aff = nibImg.affine
+
+    brainSlices = selectNewSliceCoordinates(img)
 
     # Dim0 in pixel space corresponds to coronal view (dim1) in MNI space
     for dim0Slice in brainSlices[0]:
-        newSlice = coord_transform(dim0Slice, 0, 0, affine)
-        newFn = subject+"_coronal_slice"+str(int(newSlice[1])).zfill(3), output_file=newFn+".png"
-        plotting.plot_anat(nibImg, display_mode="y", cut_coords=[tmp[1]], draw_cross = False, output_file=newFn)
+        newSlice = coord_transform(dim0Slice, 0, 0, aff)
+        newFn = subject+"_coronal_slice"+str(int(newSlice[1])).zfill(3)+".png"
+        plotting.plot_anat(nibImg, display_mode="y", cut_coords=[newSlice[1]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
  
-
+    # Dim1 in pixel space corresponds to dim2 in MNI space
     for dim1Slice in brainSlices[1]:
-        pass
+        newSlice = coord_transform(0, dim1Slice, 0, aff)
+        newFn = subject+"_axial_slice"+str(int(newSlice[2])).zfill(3)+".png"
+        plotting.plot_anat(nibImg, display_mode="z", cut_coords=[newSlice[2]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
 
     for dim2Slice in brainSlices[2]:
-        pass
-   
+        newSlice = coord_transform(0, 0, dim2Slice, aff)
+        newFn = subject+"_sagittal_slice"+str(int(newSlice[0])).zfill(3)+".png"
+        plotting.plot_anat(nibImg, display_mode="x", cut_coords=[newSlice[0]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
+  
+
     print("PNGs generated for", subject)
 
 
@@ -329,7 +267,7 @@ def main():
                existingPngs = glob.glob(outDir + "/*.png")
                if len(existingPngs) < 9:
                    print("Generating Image Slices for", scanID)
-                   generatePngsSingleScan(scanPath, scanID, outDir)
+                   generatePngsSingleScanNibabel(scanPath, scanID, outDir)
 
 
 if __name__ == "__main__":
