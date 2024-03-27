@@ -1,17 +1,44 @@
 The purpose of this tool is to generate a set of 9 views for each of a set of nifti scans and provide an interface for manually grading the quality of each scan.
 
-Step 01: runPngGenerator.py
+### Step 00: Set up your local environment
 
-- Needs to be modified to include argparse command line arguments
-- Currently operates on outputs of the FS/IFS pipeline, but only uses the registered and skull stripped version of the scan (no segmentations)
-- For each anat scan in the specified BIDS directory, 
-    - Determine if the scan would have been processed with FS or IFS based on patient age
-    - Check that there are not already .PNG files for that scan
-    - Pseudorandomly select 3 slices from each view (sagittal, axial, coronal) from around the 25%, 50%, and 75% slices of that view
-    - Create a Freeview command to extract and save those slices as .PNGs
-    - Kick off each Freeview command as a subprocess
+This repo requires the `nilearn` Python library (among others). To set up your environment to support this code, follow the following steps:
 
-Step 02: generatePngBatches.py
+```
+conda create -n nilearn python=3.9
+conda activate nilearn
+python -m pip install -U nilearn
+conda install conda-forge::nibabel
+conda install scikit-learn
+```
+
+If you encounter errors when trying to load `nilearn`, you may also need to run the following commands:
+
+```
+pip install pyyaml
+pip install urllib3=1.25.4
+```
+
+Additionally, the following libraries may be useful for debugging purposes: 
+
+```
+conda install jupyter
+pip install chardet
+conda install matplotlib
+```
+
+### Step 01: runPngGenerator.py
+
+This script takes two command line arguments:
+
+- `--input-dir`: The path to the BIDS directory containing subject/session/anat/image.nii.gz files
+- `--output-dir`: The path that will contain the directories of PNGs for QC after the script is run.
+
+The script currently looks for raw MPR labeled .nii or .nii.gz scans in the input directory (following the subject/session/anat path), pseudorandomly identified 3 slices from around the 25th, 50th, and 75th centiles of the image data in each dimension, and saves them as PNG files in the output directory.
+
+### Step 02: generatePngBatches.py
+
+Updates have left off here.
 
 - Divide the PNGs for each scan into batches that are expected to take 30 minutes to grade. Assuming 5 seconds to examine each set of 3 PNGs in the same view and 3 views per scan, it should take less than 1 minute to grade each scan. 
 - Previous documentation indicates that grading 30 scans took about 9 minutes
@@ -25,7 +52,9 @@ Step 02: generatePngBatches.py
     - Grab a random set of PNGs from each age group
     - Put the files in a directory labelled by batch number
 
-Step 03: Image QC Tool.ipynb
+### Step 03: Image QC Tool.ipynb
+
+This step will eventually be migrated to Brain Swipes
 
 - First cell: Each grader must change the rater name to the name they would like to be used in any future publications
 - Second cell:
