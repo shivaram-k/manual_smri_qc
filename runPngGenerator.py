@@ -11,6 +11,11 @@ import nibabel
 from nilearn import plotting
 from nilearn.image import coord_transform
 
+##
+# Select 3 pseudorandom slices from one dimension of the brain
+# @parameter brainMin The lower bound of the brain in that dimension
+# @parameter brainMax The upper bound of the brain in that dimension
+# @return brainSliceIndices A list of 3 pseudorandomly selected slice indices
 def selectSliceIndices(brainMin, brainMax):
     randRange = int(round((brainMax - brainMin)*0.05))
     # Get the slices for each dimension
@@ -21,6 +26,10 @@ def selectSliceIndices(brainMin, brainMax):
     return [slice1, slice2, slice3]
 
 
+##
+# Check that the contents of an image slice is at least 10% tissue
+# @parameter brainSlice The numpy array containing the image data for a single slice
+# @return True or False based on the number of nonzero pixels in the slice
 def checkSliceHasTissue(brainSlice):
     # Make sure at least 10% of the brainSlice is actually brain
     totalPixels = len(brainSlice)*len(brainSlice[0])
@@ -32,6 +41,10 @@ def checkSliceHasTissue(brainSlice):
         return False
 
 
+##
+# Pick a set of
+# @parameter img A numpy array of a 3D brain image
+# @return A list of 3 lists containing the selected slice indices for each of the 3 dimensions of the iamge
 def selectNewSliceCoordinates(img):
     # Goal: identify volume of brain that's non-zero
     # Get the upper and lower bounds of brain in each dimension
@@ -52,8 +65,12 @@ def selectNewSliceCoordinates(img):
     # Dimension 0
     dim0Slices = selectSliceIndices(dim0MinBrain, dim0MaxBrain)
     k = 1
+    # If the image does not consist of at least 10% tissue, regenerate
     while not all([checkSliceHasTissue(img[i, :, :]) for i in dim0Slices]):
         print("Regenerating dim0 slices")
+        # If reselecting the slices does not produce slices with >10% 
+        #  tissue content after 5 reselections, reduce the space
+        #  available for the slices to be selected from
         if k % 5 == 0:
             dim0MinBrain += 1
             dim0MaxBrain -= 1
@@ -63,8 +80,12 @@ def selectNewSliceCoordinates(img):
     # Dimension 1
     dim1Slices = selectSliceIndices(dim1MinBrain, dim1MaxBrain)
     k = 1
+    # If the image does not consist of at least 10% tissue, regenerate
     while not all([checkSliceHasTissue(img[:, i, :]) for i in dim1Slices]):
         print("Regenerating dim1 slices")
+        # If reselecting the slices does not produce slices with >10% 
+        #  tissue content after 5 reselections, reduce the space
+        #  available for the slices to be selected from
         if k % 5 == 0:
             dim1MinBrain += 1
             dim1MaxBrain -= 1
@@ -74,8 +95,12 @@ def selectNewSliceCoordinates(img):
     # Dimension 2
     dim2Slices = selectSliceIndices(dim2MinBrain, dim2MaxBrain)
     k = 1
+    # If the image does not consist of at least 10% tissue, regenerate
     while not all([checkSliceHasTissue(img[:, :, i]) for i in dim2Slices]):
         print("Regenerating dim2 slices")
+        # If reselecting the slices does not produce slices with >10% 
+        #  tissue content after 5 reselections, reduce the space
+        #  available for the slices to be selected from
         if k % 5 == 0:
             dim2MinBrain += 1
             dim2MaxBrain -= 1
@@ -84,13 +109,19 @@ def selectNewSliceCoordinates(img):
     
     return [dim0Slices, dim1Slices, dim2Slices]
 
-
-def generatePngsSingleScanNibabel(mprFn, subject, outputDir):
+## 
+# Use the nibabel library to generate a set of PNGs from a brain scan
+# @parameter scanFn A string representing the full path to a scan
+# @parameter subject A string of the subject's identifier
+# @parameter outputDir A string specifying the directory to save the PNGs to
+# @return None
+def generatePngsSingleScanNibabel(scanFn, subject, outputDir):
     # Load the masked brain image
-    nibImg = nibabel.load(mprFn)
+    nibImg = nibabel.load(scanFn)
     img = nibImg.get_fdata()
     aff = nibImg.affine
-
+    
+    # Select the desired slices to get PNGs of
     brainSlices = selectNewSliceCoordinates(img)
 
     # Dim0 in pixel space corresponds to coronal view (dim1) in MNI space
@@ -105,6 +136,7 @@ def generatePngsSingleScanNibabel(mprFn, subject, outputDir):
         newFn = subject+"_axial_slice"+str(int(newSlice[2])).zfill(3)+".png"
         plotting.plot_anat(nibImg, display_mode="z", cut_coords=[newSlice[2]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
 
+    # Dim2 in pixel space corresponds to dim0 in MNI space
     for dim2Slice in brainSlices[2]:
         newSlice = coord_transform(0, 0, dim2Slice, aff)
         newFn = subject+"_sagittal_slice"+str(int(newSlice[0])).zfill(3)+".png"
@@ -113,115 +145,22 @@ def generatePngsSingleScanNibabel(mprFn, subject, outputDir):
 
     print("PNGs generated for", subject)
 
-
-
-def generatePngsSingleScanFreeView(mprFn, subject, outputDir):
-    freeview_command = 'freeview -cmd {cmd} '
-    cmd_txt = """ -v {anatomy}:grayscale=10,500  """
-
-    # Load the json file for the scan
-    jsonPath = mprFn.replace(".nii", ".json").replace(".gz", "")
-    with open(jsonPath, 'r') as f:
-        metadata = json.load(f)
-
-    if "ImageOrientation" in metadata:
-        orientation = metadata['ImageOrientation']
-        print(orientation)
-    else:
-        # want to raise an error here and notify the user to run cubids-add-nifti-info first before running this script
-        pass
-
-    if orientation == "LAS+":   
-        # This order of coordinates works with LAS+ orientations
-        dim0_slice = ' -slice {xpos} {ymid} {zmid} \n -ss {opfn} \n  '  
-        dim1_slice = ' -slice {xmid} {ypos} {zmid} \n -ss {opfn} \n  '  
-        dim2_slice = ' -slice {xmid} {ymid} {zpos} \n -ss {opfn} \n  '  
-    elif orientation == "PSR+":
-        # This order of coordinates works with PRS+ orientations
-        dim0_slice = ' -slice {ymid} {zmid} {xpos} \n -ss {opfn} \n  '  
-        dim1_slice = ' -slice {ypos} {zmid} {xmid} \n -ss {opfn} \n  '  
-        dim2_slice = ' -slice {ymid} {zpos} {xmid} \n -ss {opfn} \n  '  
-    else:
-        print(type(orientation))
-
-    # Set up variables 
-#    mprFn = os.path.join(FS_folder, 'mri', 'norm.mgz')          # Want to use the images without the face
-    target_directory = outputDir
-    os.makedirs(target_directory, exist_ok=True)
-    cmd_file_x = os.path.join(target_directory, 'cmd_x.txt')
-    cmd_file_y = os.path.join(target_directory, 'cmd_y.txt')
-    cmd_file_z = os.path.join(target_directory, 'cmd_z.txt')
-
-    # Start writing the command string
-    sj_cmd = cmd_txt.format(
-        anatomy=mprFn,
-        subject=subject
-    )
-
-    brainSlices, brainMids = selectBrainSlices(mprFn)
-    
-    sj_cmd_x = sj_cmd + " -viewport x "
-    sj_cmd_y = sj_cmd + " -viewport y "
-    sj_cmd_z = sj_cmd + " -viewport z "
-
-
-    for dim0Slice in brainSlices[0]:
-        sj_cmd_x += dim0_slice.format(
-            xpos=dim0Slice,
-            ymid = brainMids[1],
-            zmid = brainMids[2],
-            opfn=os.path.join(target_directory, subject+"_dim0_"+str(
-                dim0Slice).zfill(3) + '.png')
-        ) 
-
-    for dim1Slice in brainSlices[1]:
-        sj_cmd_y += dim1_slice.format(
-            xmid = brainMids[0],
-            ypos=dim1Slice,
-            zmid = brainMids[2],
-            opfn=os.path.join(target_directory, subject+"_dim1_"+str(
-                dim1Slice).zfill(3) + '.png')
-        ) 
-
-    for dim2Slice in brainSlices[2]:
-        sj_cmd_z += dim2_slice.format(
-            xmid = brainMids[0],
-            ymid = brainMids[1],
-            zpos=dim2Slice,
-            opfn=os.path.join(target_directory, subject+"_dim2_"+str(
-                dim2Slice).zfill(3) + '.png') 
-        ) 
-
-    with open(cmd_file_x, 'w') as f:
-        sj_cmd_x += ' -quit \n '
-        f.write(sj_cmd_x)
-        
-    with open(cmd_file_y, 'w') as f:
-        sj_cmd_y += ' -quit \n '
-        f.write(sj_cmd_y)
-        
-    with open(cmd_file_z, 'w') as f:
-        sj_cmd_z += ' -quit \n '
-        f.write(sj_cmd_z)
-
-    os.system("module load FreeSurfer/7.1.1")
-    sb.call(freeview_command.format(cmd=cmd_file_x), shell=True)
-    sb.call(freeview_command.format(cmd=cmd_file_y), shell=True)
-    sb.call(freeview_command.format(cmd=cmd_file_z), shell=True)
-    
-    print("PNGs generated for", subject)
-
+##
+# Main function
 def main():
+    # --- Set up the argument parser ---
     parser = argparse.ArgumentParser()
+    # Add an argument to get the directory of scans to generate PNGs from
     parser.add_argument('-i', '--input-dir', help='Path to and including input BIDS directory')
+    # Add an argument to get the directory where the QC PNGs will be written
     parser.add_argument('-o', '--output-dir', help='Path to output directory for QC PNG storage')
-  
+ 
+    # Parse the arguments
     args = parser.parse_args()
     inDir = args.input_dir
-    
-    # --- Output directory --- 
-    # outBase = "/home/gudapatis/SLIP_QC/pngOutputs"
     outBase = args.output_dir
+
+    # If the output directory doesn't exist, create it
     if not os.path.exists(outBase):
         os.makedirs(outBase)
         
@@ -235,7 +174,8 @@ def main():
 
     demoDf = pd.read_csv(demoPath, sep="\t")
     
-    # --- Get a list of subject IDs ---
+    # --- For all of the subjects in the input directory ---
+    # Get a list of subject IDs 
     subIDs = [sub for sub in os.listdir(inDir) if "sub-" in sub]
     
     for subID in subIDs:
@@ -244,6 +184,7 @@ def main():
         # List of sessions
         sesIDs = [ses for ses in os.listdir(subPath) if "ses-" in ses]
         
+        # --- For every session belonging to a single subject ---
         for sesID in sesIDs:
            sesPath = os.path.join(subPath, sesID)
            anatPath = os.path.join(sesPath, "anat")
@@ -252,23 +193,26 @@ def main():
            if not os.path.exists(anatPath):
                continue
            # Get the list of niftis in the anat folder
+           # TODO: generalize for more than MPR labeled scans
            scans = [scan for scan in os.listdir(anatPath) if ".nii" in scan and "MPR" in scan]
-           
+          
+           # --- For every anat scan in that session for the subject ---
            for scan in scans:
                scanID = scan.split(".nii")[0]
-               print(subID, sesID, scanID)
+               print(subID, sesID, scanID) # sanity check
                scanPath = os.path.join(anatPath, scan)
-               # Output directory
+               # Make the output directory if it doesn't exist
                outDir = os.path.join(outBase, scanID)
                if not os.path.exists(outDir):
                    os.makedirs(outDir)
                    
                # If there are already pngs for the scan
                existingPngs = glob.glob(outDir + "/*.png")
-               if len(existingPngs) < 9:
+               if len(existingPngs) < 9: # TODO: generalize for more PNGS
                    print("Generating Image Slices for", scanID)
                    generatePngsSingleScanNibabel(scanPath, scanID, outDir)
 
 
 if __name__ == "__main__":
     main()
+    print("The script has finished running")
