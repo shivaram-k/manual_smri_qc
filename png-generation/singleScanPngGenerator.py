@@ -10,6 +10,7 @@ import json
 import nibabel
 from nilearn import plotting
 from nilearn.image import coord_transform
+import synthsegOverlay
 
 ##
 # Select 3 pseudorandom slices from one dimension of the brain
@@ -115,49 +116,72 @@ def selectNewSliceCoordinates(img):
 # @parameter subject A string of the subject's identifier
 # @parameter outputDir A string specifying the directory to save the PNGs to
 # @return None
-def generatePngsSingleScanNibabel(scanFn, subject, outputDir):
+def generatePngsSingleScanNibabel(scanPath, scanID, outBase, segPath):
+
+
     # Load the masked brain image
-    nibImg = nibabel.load(scanFn)
+    nibImg = nibabel.load(scanPath)
     img = nibImg.get_fdata()
     aff = nibImg.affine
     
     # Select the desired slices to get PNGs of
     brainSlices = selectNewSliceCoordinates(img)
+    
+    # Output directory
+    outputDir = os.path.join(outBase, scanID)
 
     # Dim0 in pixel space corresponds to coronal view (dim1) in MNI space
     for dim0Slice in brainSlices[0]:
         newSlice = coord_transform(dim0Slice, 0, 0, aff)
-        newFn = subject+"_coronal_slice"+str(int(newSlice[1])).zfill(3)+".png"
+        newFnBase = scanID+"_coronal_slice"+str(int(newSlice[1])).zfill(3)
+        newFn = newFnBase+".png"
         plotting.plot_anat(nibImg, display_mode="y", cut_coords=[newSlice[1]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
+        
+        #SS Overlay
+        if segPath is not None:
+        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, "y", [newSlice[1]], outBase, newFnBase)
  
     # Dim1 in pixel space corresponds to dim2 in MNI space
     for dim1Slice in brainSlices[1]:
         newSlice = coord_transform(0, dim1Slice, 0, aff)
-        newFn = subject+"_axial_slice"+str(int(newSlice[2])).zfill(3)+".png"
+        newFnBase = scanID+"_axial_slice"+str(int(newSlice[2])).zfill(3)
+        newFn = newFnBase+".png"
         plotting.plot_anat(nibImg, display_mode="z", cut_coords=[newSlice[2]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
+        
+        #SS Overlay
+        if segPath is not None:
+        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, "z", [newSlice[2]], outBase, newFnBase)
 
     # Dim2 in pixel space corresponds to dim0 in MNI space
     for dim2Slice in brainSlices[2]:
         newSlice = coord_transform(0, 0, dim2Slice, aff)
-        newFn = subject+"_sagittal_slice"+str(int(newSlice[0])).zfill(3)+".png"
+        newFnBase = scanID+"_sagittal_slice"+str(int(newSlice[0])).zfill(3)
+        newFn = newFnBase+".png"
         plotting.plot_anat(nibImg, display_mode="x", cut_coords=[newSlice[0]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
+        
+        #SS Overlay
+        if segPath is not None:
+        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, "x", [newSlice[0]], outBase, newFnBase)
   
 
-    print("PNGs generated for", subject)
+    print("PNGs generated for", scanID)
 
 ##
 # Main function
 def main():
     # --- Set up the argument parser ---
     parser = argparse.ArgumentParser()
-    # Add an argument to get the scan to generate PNGs from
-    parser.add_argument('-f', '--scan-fn', help='Full path to the .nii(.gz) scan')
-    # Add an argument to get the directory where the QC PNGs will be written
-    parser.add_argument('-o', '--out-dir', help='Full path to the directory where the PNG files should be written to')
+    # Add an argument to get the scan to generate PNGs from --> Required!
+    parser.add_argument('-f', '--scan-fn', help='Full path to the .nii(.gz) scan', required = True)
+    # Add an argument to get the directory where the QC PNGs will be written --> Required!
+    parser.add_argument('-o', '--out-dir', help='Full path to the directory where the PNG files should be written to', required = True)
+    # Add an optional argument to get the derivatives directory for synthseg overlay PNGs --> Optional!
+    parser.add_argument('-d', '--der-fn', help='Full path to the synthseg derivatives directory ')
 
     args = parser.parse_args()
     scanPath = args.scan_fn
     outBase = args.out_dir
+    segPath = args.der_fn
 
     scanID = scanPath.split("/")[-1].split(".nii")[0]
     # Make the output directory if it doesn't exist
@@ -169,7 +193,7 @@ def main():
     existingPngs = glob.glob(outDir + "/*.png")
     if len(existingPngs) < 9: # TODO: generalize for more PNGS
         print("Generating Image Slices for", scanID)
-        generatePngsSingleScanNibabel(scanPath, scanID, outDir)
+        generatePngsSingleScanNibabel(scanPath, scanID, outBase, segPath)
 
 
 if __name__ == "__main__":
