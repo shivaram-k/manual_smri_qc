@@ -1,4 +1,9 @@
 
+"""
+
+This script contains functions that generate PNGs with synthseg overlays. It (specifically, the `generateOverlay` function) is used by singleScanPngGenerator.py.
+
+"""
 import matplotlib.colors as mcolors
 import nibabel
 import numpy as np
@@ -8,6 +13,7 @@ import glob
 
 def map_ss_labels(seg_img, synthseg_data):
 	
+	# Grouping Synthseg output labels to ensure uniform colors for display
 	value_mapping = {
 	0.0 : 0.0,
 	2.0 : 2.0, 41.0 : 2.0,
@@ -83,9 +89,4 @@ def generateOverlay(segPath, scanID, anat_img, display_mode, coords, outBase, ne
 	# Plot the overlay
 	plotOverlay(mapped_data, modified_seg_img, anat_img, display_mode, coords, outFn)
 	
-
-
-def main():
-	# Complete this function so the file can be run separately too
-	pass
 

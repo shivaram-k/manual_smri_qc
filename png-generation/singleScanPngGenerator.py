@@ -1,3 +1,25 @@
+
+"""
+This script pseudorandomly identifies 3 slices from around the 25th, 50th, and 75th centiles of the image data in each dimension, 
+and saves them as PNG files in the output directory. If a path to the Synthseg outputs directory is provided, it additionally 
+creates PNGs with Synthseg outputs overlaid on those slices and saves them in the <outDir>_SS_Overlays directory.
+
+	Input arguments : 
+	`-f` (required): Full path to the .nii(.gz) scan
+	`-o` (required): Full path to the directory where the PNG files should be written to
+	`-d` (optional): Path to the directory containing sysnthseg outputs
+
+	Output :
+	if `-d` is not provided:
+		1. Output directory `<outDir>` containing structural PNGs organized in subdirectories named after their respective scan names.
+
+	else:
+  		1. Output directory `<outDir>` containing structural PNGs organized in subdirectories named after their respective scan names.
+  		2. Output directory `<outDir>_SS_Overlays` containing (structural + synthseg overlay) PNGs, organized in subdirectories named after their respective scan names.
+  		
+"""
+
+
 import subprocess as sb
 import os
 import glob

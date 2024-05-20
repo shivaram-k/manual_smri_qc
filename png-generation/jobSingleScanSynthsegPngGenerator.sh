@@ -6,6 +6,17 @@
 #SBATCH --mem-per-cpu=8G
 #SBATCH --output=%x_%j.out
 
+# -------------------------------------------
+# This script submits a job to run singleScanPngGenerator.py on the input scan, creating (structural + synthseg overlay) PNGs. 
+# It is used internally by runPngGenerator.py.
+
+#	Input arguments :
+#	`INFN` : Path to input scan
+#	`OUTDIR` : Path to output directory
+#	`INDER` : Path to the directory containing sysnthseg outputs
+# -------------------------------------------
+
+
 INFN=$1      # file name
 OUTDIR=$2    # output directory for PNGs
 INDER=$3 # path to the derivatives folder with ss outputs

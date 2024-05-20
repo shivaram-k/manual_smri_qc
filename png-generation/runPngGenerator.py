@@ -1,3 +1,21 @@
+
+"""
+This script currently looks for anat MPR labeled `.nii` or `.nii.gz` scans in the input directory (following the subject/session/anat path) 
+and runs the job submission script for each scan to generate PNGs.
+
+	Inputs arguments :
+	`-i` (required): Path to the input BIDS directory
+	`-o` (required): Full path to the output directory for QC PNG storage
+	`-d` (optional): Full path to the directory containing sysnthseg outputs
+
+	Output :
+	if `-d` is provided :
+		sbatch jobSingleScanSynthsegPngGenerator.sh <scanPath> <outBase> <scanDer>
+	else :
+		sbatch jobSingleScanPngGenerator.sh <scanPath> <outBase>
+
+"""
+
 import glob
 import pandas as pd
 import sys
@@ -5,13 +23,12 @@ import os
 import argparse
 import json
 
-##
 # Main function
 def main():
     # --- Set up the argument parser ---
     parser = argparse.ArgumentParser()
     # Add an argument to get the directory of scans to generate PNGs from
-    parser.add_argument('-i', '--input-dir', help='Path to and including input BIDS directory', required = True)
+    parser.add_argument('-i', '--input-dir', help='Full path to the input BIDS directory', required = True)
     # Add an argument to get the directory where the QC PNGs will be written
     parser.add_argument('-o', '--output-dir', help='Path to output directory for QC PNG storage', required = True)
     # Add an optional argument to get the derivatives directory for synthseg overlay PNGs --> Optional!
@@ -26,16 +43,7 @@ def main():
     # If the output directory doesn't exist, create it
     if not os.path.exists(outBase):
         os.makedirs(outBase)
-        
-    # --- Read participants.tsv ---
-    demoPath = os.path.join(inDir, "participants.tsv")
-    
-    # Exit if participants.tsv not present
-    if not os.path.exists(demoPath):
-        print("Not a valid BIDS directory. Missing participants.tsv")
-        sys.exit(1)
 
-    
     # --- For all of the subjects in the input directory ---
     # Get a list of subject IDs 
     subIDs = [sub for sub in os.listdir(inDir) if "sub-" in sub]
@@ -69,13 +77,18 @@ def main():
                      cmd = 'sbatch jobSingleScanSynthsegPngGenerator.sh '
                      cmd += scanPath + ' ' + outBase + ' ' + scanDer
                      os.system(cmd)
+                     print("Submitted job for : ", scanID)
+                     print()
                   else:
-                     print("Segmentation output does not exist for scan : ", scanID)
+                     print("!! Segmentation output does not exist for scan : ", scanID)
+                     print()
                      
                else:
                   cmd = 'sbatch jobSingleScanPngGenerator.sh '
                   cmd += scanPath + ' ' + outBase
                   os.system(cmd)
+                  print("Submitted job for : ", scanID)
+                  print()
          
 
 if __name__ == "__main__":
