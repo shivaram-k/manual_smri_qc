@@ -93,7 +93,7 @@ def display_batch_for_grading(batch_number, grader_name, qc_files):
 def start_grading():
 
 	# Enter path to qc_files directory
-	qc_files = input("Enter path to the qc_files directory : ").strip()
+	qc_files = input("Enter path to the qc_files or qc_files_synthseg directory : ").strip()
 	
 	# Prompt grader to enter their name
 	grader_name = input("Enter your name: ").strip().lower().replace(' ', '_')
