@@ -1,6 +1,6 @@
 The purpose of this tool is to generate a set of 9 views for each of a set of nifti scans and provide an interface for manually grading the quality of each scan.
 
-### Set up your local environment
+### I. Set up your local environment
 
 This repo requires the `nilearn` Python library (among others). To set up your environment to support this code, follow the following steps:
 
@@ -34,7 +34,7 @@ pip install chardet
 conda install matplotlib
 ```
 
-### PNG Generation
+### II. PNG Generation
 
 To generate PNGs for MPRs in a BIDS directory, run the following commands :
 ```
@@ -54,3 +54,33 @@ This results in the following output:
 1. `/home/<user>/QC`: Structural PNGs organized in subdirectories named after their respective scan names.
 2. `/home/<user>/QC_SS_Overlays`: (Structural + Synthseg overlay) PNGs, organized in subdirectories named after their respective scan names.
 ### GIF Generation
+
+Todo : add documentation
+
+### For the next two steps, use the code files in the `grading-new` folder.
+### III. Generate PNG batches
+
+Divide the PNGs into batches that are expected to take about 15 minutes to grade. Assuming 5 seconds to examine each set of 3 PNGs in the same view and 3 views per scan, it should take less than 1 minute to grade each scan.
+- For structural PNGs :
+```
+python generatePngBatches.py -i /path/to/input/png/directory -p /path/to/participants.tsv -u ageUnits -o /path/to/the/output/base/directory
+```
+
+Example - 
+```
+ python generatePngBatches.py -i /home/<user>/QC -p /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS/participants.tsv -u m -o /home/<user>
+```
+
+- For (Structural + Synthseg overlay) PNGs :
+```
+python generatePngBatches.py -i /path/to/input/png/directory -s -p /path/to/participants.tsv -u ageUnits -o /path/to/the/output/base/directory
+```
+
+Example - 
+```
+ python generatePngBatches.py -i /home/<user>/QC_SS_Overlays -s -p /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS/participants.tsv -u m -o /home/<user>
+```
+
+### IV. Grading Notebook
+
+Run the cells and proceed as directed.
