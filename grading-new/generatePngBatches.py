@@ -103,7 +103,7 @@ def main():
 	parser.add_argument('-s', '--synthseg', help='Generate batches for synthseg overlay PNGs', action='store_true')
 	parser.add_argument('-p', '--participants', help='Path to the participants.tsv file', required=True)
 	parser.add_argument('-u', '--age-units', help='Units of age (accepted values : m, d, y)', choices = ['m', 'd', 'y'],required=True)
-	parser.add_argument('-o', '--output-dir', help='Path to the output base directory where the \'qc_files\' directory, containing grading-related files, will be output', required=True)
+	parser.add_argument('-o', '--output-dir', help='Path to the output base directory where the \'qc_files\' or \'qc_files_synthseg\' directory, containing grading-related files, will be output', required=True)
 	
 	# Parse arguments
 	args = parser.parse_args()
