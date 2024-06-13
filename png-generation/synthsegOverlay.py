@@ -64,7 +64,7 @@ def plotOverlay(mapped_data, modified_seg_img, anat_img, display_mode, coords, o
 	# Plot the SynthSeg segmentation map with unique colors for each label
 	plotting.plot_roi(roi_img=modified_seg_img, bg_img=anat_img, cmap=cmap, draw_cross = False, dim = -0.7,\
 	display_mode=display_mode, cut_coords=coords,\
-	alpha = 0.4, colorbar = True, output_file = outFn)
+	alpha = 0.4, output_file = outFn)
 	
 
 def generateOverlay(segPath, scanID, anat_img, display_mode, coords, outBase, newFnBase):

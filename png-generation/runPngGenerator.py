@@ -69,9 +69,9 @@ def main():
            # --- For every anat scan in that session for the subject ---
            for scan in scans:
                scanPath = os.path.join(anatPath, scan)
+               scanID = scan.split(".nii")[0]
                # Submit the job here
                if derivatives is not None:
-                  scanID = scan.split(".nii")[0]
                   scanDer = os.path.join(derivatives, scanID, scanID+"_synthseg.nii.gz")
                   if os.path.exists(scanDer):
                      cmd = 'sbatch jobSingleScanSynthsegPngGenerator.sh '

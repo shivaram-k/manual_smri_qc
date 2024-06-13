@@ -42,9 +42,9 @@ import synthsegOverlay
 def selectSliceIndices(brainMin, brainMax):
     randRange = int(round((brainMax - brainMin)*0.05))
     # Get the slices for each dimension
-    slice1 = int((brainMax - brainMin)/4 + brainMin + random.randint(-randRange, randRange))
-    slice2 = int((brainMax - brainMin)/2 + brainMin + random.randint(-randRange, randRange))
-    slice3 = int((brainMax - brainMin)*3/4 + brainMin + random.randint(-randRange, randRange))
+    slice1 = int((brainMax - brainMin)*0.35 + brainMin + random.randint(-randRange, randRange))
+    slice2 = int((brainMax - brainMin)*0.5 + brainMin + random.randint(-randRange, randRange))
+    slice3 = int((brainMax - brainMin)*0.65 + brainMin + random.randint(-randRange, randRange))
     
     return [slice1, slice2, slice3]
 
