@@ -45,7 +45,7 @@ python runPngGenerator -i /path/to/input/BIDS -o /path/to/output/directory [-d /
 
 Example - 
 ```
- python  runPngGenerator -i /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS 
+ python  runPngGenerator.py -i /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS 
 						-o /home/<user>/QC 
 						-d /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/derivatives/synthseg+_robust_parc
 ```
