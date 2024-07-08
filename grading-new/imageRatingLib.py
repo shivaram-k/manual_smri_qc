@@ -82,7 +82,37 @@ def get_pending_batches(grader_name, qc_files):
                 pending_batches.append(batch_number)
     return sorted(pending_batches)
 
+# Function to get age_group to display in the notebook
+def get_age_group(age_bin_num):
 	
+	# 0-1 month : bin number 1
+	# 1-6 months: bin number 2
+	# 6-12 months: bin number 3
+	# 1-2 years: bin number 4
+	# 2-5 years: bin number 5
+	# 5-12 years: bin number 6
+	# 12-50: bin number 7
+	# 50+ : bin number 8
+	
+	if age_bin_num==1 :
+		age_group = "0-1 month"
+	elif age_bin_num==2 :
+		age_group = "1-6 months"
+	elif age_bin_num==3 :
+		age_group = "6-12 months"
+	elif age_bin_num==4 :
+		age_group = "1-2 years"
+	elif age_bin_num==5 :
+		age_group = "2-5 years"
+	elif age_bin_num==6 :
+		age_group = "5-12 years"
+	elif age_bin_num==7 :
+		age_group = "12-50 years"
+	elif age_bin_num==8 :
+		age_group = "50+ years"
+		
+	return age_group
+
 	
 # Function to display batch for grading
 def display_batch_for_grading(batch_number, grader_name, qc_files):
@@ -92,10 +122,11 @@ def display_batch_for_grading(batch_number, grader_name, qc_files):
 	batch_df = pd.read_csv(full_file_path, sep='\t')
 	grades = []
 	for index, row in batch_df.iterrows():
-		print(f"Grading batch {batch_number}:")
+		age_group = get_age_group(int(row["age_bin_num"]))
+		print(f"Grading batch {batch_number} [Age group " , age_group ,"]:")
 		display(Image(filename=row["full_path"]))
 		# ask for a rating
-		rating = input("Grade the image on a scale of 0/1/2 (aka not sure/poor quality/good quality : ")
+		rating = input("Grade the image on a scale of -1/0/2 (aka not sure/poor quality/good quality) : ")
 
 		while True:
 			try:
@@ -103,10 +134,10 @@ def display_batch_for_grading(batch_number, grader_name, qc_files):
 			except:
 				print("Invalid rating value.")
 
-			if rating in [0, 1, 2]:
+			if rating in [0, -1, 2]:
 				break
 			else:
-				rating = input("Grade the image on a scale of 0/1/2 (aka not sure/poor quality/good quality : ")
+				rating = input("Grade the image on a scale of -1/0/2 (aka not sure/poor quality/good quality) : ")
 				
 		# Save the rating
 		batch_df.at[index, f'grade_{grader_name}'] = rating
