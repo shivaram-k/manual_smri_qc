@@ -126,7 +126,7 @@ def display_batch_for_grading(batch_number, grader_name, qc_files):
 		print(f"Grading batch {batch_number} [Age group " , age_group ,"]:")
 		display(Image(filename=row["full_path"]))
 		# ask for a rating
-		rating = input("Grade the image on a scale of -1/0/2 (aka not sure/poor quality/good quality) : ")
+		rating = input("Grade the image on a scale of -1/0/2 (aka flag the image/poor quality/good quality) : ")
 
 		while True:
 			try:
@@ -137,7 +137,7 @@ def display_batch_for_grading(batch_number, grader_name, qc_files):
 			if rating in [0, -1, 2]:
 				break
 			else:
-				rating = input("Grade the image on a scale of -1/0/2 (aka not sure/poor quality/good quality) : ")
+				rating = input("Grade the image on a scale of -1/0/2 (aka flag the image/poor quality/good quality) : ")
 				
 		# Save the rating
 		batch_df.at[index, f'grade_{grader_name}'] = rating
