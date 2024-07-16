@@ -81,7 +81,7 @@ def get_pending_batches(grader_name, qc_files):
             df = pd.read_csv(os.path.join(os.path.join(qc_files, grader_name), file_name), sep='\t')
             if (f'grade_{grader_name}' not in df.columns) or (df[f'grade_{grader_name}'].isna().any()):
                 pending_batches.append(batch_number)
-    return sorted(pending_batches)
+    return sorted(pending_batches, reverse=True)
 
 # Function to get age_group to display in the notebook
 def get_age_group(age_bin_num):
@@ -125,7 +125,7 @@ def display_batch_for_grading(batch_number, grader_name, qc_files):
     for index, row in batch_df.iterrows():
         age_group = get_age_group(int(row["age_bin_num"]))
         print(f"Grading batch {batch_number} [Age group " , age_group ,"]:")
-        img = Image.open(row["full_path"])
+        img = Image.open(os.path.expanduser(row["full_path"]))
         scale = 2.5
         display(img.resize((int(img.width * scale), int(img.height * scale))))
         # ask for a rating
