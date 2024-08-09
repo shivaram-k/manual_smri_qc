@@ -33,12 +33,15 @@ def main():
     parser.add_argument('-o', '--output-dir', help='Path to output directory for QC PNG storage', required = True)
     # Add an optional argument to get the derivatives directory for synthseg overlay PNGs --> Optional!
     parser.add_argument('-d', '--der-dir', help='Full path to the synthseg derivatives directory ')
+    # Add an optional argument to inidcate that the BIDS scans underwent ACPC alignment
+    parser.add_argument('-p', '--preprocessed', help="Flag whose presence indicates the BIDS scans were preprocessed using ACPC alignment", action='store_true')
  
     # Parse the arguments
     args = parser.parse_args()
     inDir = args.input_dir
     outBase = args.output_dir
     derivatives = args.der_dir
+    isPreprocessed = args.preprocessed
 
     # If the output directory doesn't exist, create it
     if not os.path.exists(outBase):
@@ -75,7 +78,7 @@ def main():
                   scanDer = os.path.join(derivatives, scanID, scanID+"_synthseg.nii.gz")
                   if os.path.exists(scanDer):
                      cmd = 'sbatch jobSingleScanSynthsegPngGenerator.sh '
-                     cmd += scanPath + ' ' + outBase + ' ' + scanDer
+                     cmd += scanPath + ' ' + outBase + ' ' + scanDer + ' ' + isPreprocessed
                      os.system(cmd)
                      print("Submitted job for : ", scanID)
                      print()
@@ -85,7 +88,7 @@ def main():
                      
                else:
                   cmd = 'sbatch jobSingleScanPngGenerator.sh '
-                  cmd += scanPath + ' ' + outBase
+                  cmd += scanPath + ' ' + outBase + ' ' + isPreprocessed
                   os.system(cmd)
                   print("Submitted job for : ", scanID)
                   print()

@@ -138,9 +138,7 @@ def selectNewSliceCoordinates(img):
 # @parameter subject A string of the subject's identifier
 # @parameter outputDir A string specifying the directory to save the PNGs to
 # @return None
-def generatePngsSingleScanNibabel(scanPath, scanID, outBase, segPath):
-
-
+def generatePngsSingleScanNibabel(scanPath, scanID, outBase, segPath, isPreprocessed):
     # Load the masked brain image
     nibImg = nibabel.load(scanPath)
     img = nibImg.get_fdata()
@@ -148,42 +146,70 @@ def generatePngsSingleScanNibabel(scanPath, scanID, outBase, segPath):
     
     # Select the desired slices to get PNGs of
     brainSlices = selectNewSliceCoordinates(img)
+    print("brainSlices:", brainSlices)
     
     # Output directory
     outputDir = os.path.join(outBase, scanID)
 
     # Dim0 in pixel space corresponds to coronal view (dim1) in MNI space
     for dim0Slice in brainSlices[0]:
+        print("dim0Slice:", dim0Slice)
         newSlice = coord_transform(dim0Slice, 0, 0, aff)
-        newFnBase = scanID+"_coronal_slice"+str(int(newSlice[1])).zfill(3)
+        print(newSlice)
+        if isPreprocessed:
+            sliceIdx = newSlice[0]
+            display = "y"
+        else:
+            sliceIdx = newSlice[1]
+            display = "y"
+        newFnBase = scanID+"_coronal_slice"+str(int(sliceIdx)).zfill(3)
         newFn = newFnBase+".png"
-        plotting.plot_anat(nibImg, display_mode="y", cut_coords=[newSlice[1]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
+        print(os.path.join(outputDir, newFn))
+        plotting.plot_anat(nibImg, display_mode=display, cut_coords=[sliceIdx], draw_cross = False, output_file=os.path.join(outputDir, newFn))
         
         #SS Overlay
         if segPath is not None:
-        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, "y", [newSlice[1]], outBase, newFnBase)
+        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, display, [sliceIdx], outBase, newFnBase)
  
     # Dim1 in pixel space corresponds to dim2 in MNI space
     for dim1Slice in brainSlices[1]:
+        print("dim1Slice:", dim1Slice)
         newSlice = coord_transform(0, dim1Slice, 0, aff)
-        newFnBase = scanID+"_axial_slice"+str(int(newSlice[2])).zfill(3)
+        print(newSlice)
+        if isPreprocessed:
+            sliceIdx = newSlice[1]
+            display = "z"
+        else:
+            sliceIdx = newSlice[2]
+            display = "z"
+        newFnBase = scanID+"_axial_slice"+str(int(sliceIdx)).zfill(3)
         newFn = newFnBase+".png"
-        plotting.plot_anat(nibImg, display_mode="z", cut_coords=[newSlice[2]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
+        print(os.path.join(outputDir, newFn))
+        plotting.plot_anat(nibImg, display_mode=display, cut_coords=[sliceIdx], draw_cross = False, output_file=os.path.join(outputDir, newFn))
         
         #SS Overlay
         if segPath is not None:
-        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, "z", [newSlice[2]], outBase, newFnBase)
+        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, display, [sliceIdx], outBase, newFnBase)
 
     # Dim2 in pixel space corresponds to dim0 in MNI space
     for dim2Slice in brainSlices[2]:
+        print("dim2Slice:", dim2Slice)
         newSlice = coord_transform(0, 0, dim2Slice, aff)
-        newFnBase = scanID+"_sagittal_slice"+str(int(newSlice[0])).zfill(3)
+        print(newSlice)
+        if isPreprocessed:
+            sliceIdx = newSlice[2]
+            display = "x"
+        else:
+            sliceIdx = newSlice[0]
+            display = "x"
+        newFnBase = scanID+"_sagittal_slice"+str(int(sliceIdx)).zfill(3)
         newFn = newFnBase+".png"
-        plotting.plot_anat(nibImg, display_mode="x", cut_coords=[newSlice[0]], draw_cross = False, output_file=os.path.join(outputDir, newFn))
+        print(os.path.join(outputDir, newFn))
+        plotting.plot_anat(nibImg, display_mode=display, cut_coords=[sliceIdx], draw_cross = False, output_file=os.path.join(outputDir, newFn))
         
         #SS Overlay
         if segPath is not None:
-        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, "x", [newSlice[0]], outBase, newFnBase)
+        	synthsegOverlay.generateOverlay(segPath, scanID, nibImg, display, [sliceIdx], outBase, newFnBase)
   
 
     print("PNGs generated for", scanID)
@@ -199,11 +225,14 @@ def main():
     parser.add_argument('-o', '--out-dir', help='Full path to the directory where the PNG files should be written to', required = True)
     # Add an optional argument to get the derivatives directory for synthseg overlay PNGs --> Optional!
     parser.add_argument('-d', '--der-fn', help='Full path to the synthseg derivatives directory ')
+    # Add an optional argument to inidcate that the BIDS scans underwent ACPC alignment
+    parser.add_argument('-p', '--preprocessed', help="Flag whose presence indicates the BIDS scans were preprocessed using ACPC alignment", action='store_true')
 
     args = parser.parse_args()
     scanPath = args.scan_fn
     outBase = args.out_dir
     segPath = args.der_fn
+    isPreprocessed = args.preprocessed
 
     scanID = scanPath.split("/")[-1].split(".nii")[0]
     # Make the output directory if it doesn't exist
@@ -215,7 +244,7 @@ def main():
     existingPngs = glob.glob(outDir + "/*.png")
     if len(existingPngs) < 9: # TODO: generalize for more PNGS
         print("Generating Image Slices for", scanID)
-        generatePngsSingleScanNibabel(scanPath, scanID, outBase, segPath)
+        generatePngsSingleScanNibabel(scanPath, scanID, outBase, segPath, isPreprocessed)
 
 
 if __name__ == "__main__":
