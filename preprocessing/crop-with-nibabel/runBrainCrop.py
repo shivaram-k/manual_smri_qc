@@ -1,16 +1,15 @@
 
 """
 This script currently looks for anat MPR labeled `.nii` or `.nii.gz` scans in the input directory (following the subject/session/anat path) 
-and runs the job submission script for each scan to preprocess the scans with ACPC alignment and cropping.
+and runs the job submission script for each scan to preprocess the scans by removing blank space around the scan.
 
     Input arguments :
     `-i` (required): Full path to the input BIDS directory
     `-o` (required): Full path to the output directory for preprocessed scans
-    `-s` (required): Full path to the scratch directory for intermediate files
 
     Output:
     Submits jobs for preprocessing each scan:
-        sbatch jobSingleScanPrepoc.sh <scanWorkingDir> <scanPath> <newScanPath> <omat>
+        sbatch jobSingleScanPrepocCrop.sh <scanPath> <newScanPath> 
 """
 
 
@@ -29,14 +28,12 @@ def main():
     parser.add_argument('-i', '--input-dir', help='Full path to the input BIDS directory', required = True)
     # Add an argument to get the directory where the preprocessed scans will be written
     parser.add_argument('-o', '--output-dir', help='Path to output directory for preprocessed scans', required = True)
-    # Add an argument to get the scratch directory where intermediate files will be stored. On Respublica, this could be : /scr1/users/<user>
-    parser.add_argument('-s', '--scratch-dir', help='Path to the scratch directory where intermediate files will be stored. On Respublica, this could be : /scr1/users/<user>', required = True)
+   
  
     # Parse the arguments
     args = parser.parse_args()
     inDir = args.input_dir
     outBase = args.output_dir
-    scrDir = args.scratch_dir
 
     outDir = os.path.join(outBase, 'BIDS-preprocessed')
     # If the output directory doesn't exist, create it
@@ -48,15 +45,6 @@ def main():
     os.system(cp_tsv)
     os.system(cp_json)
 
-    # Working directory for acpc alignment and cropping 
-    workingDir = os.path.join(scrDir, 'PNG_preprocessing')
-    # Create the working directory
-    if not os.path.exists(workingDir):
-        os.makedirs(workingDir)
-
-    # module load fsl
-    #os.system('module load fsl')
-    fslDir = os.getenv('FSLDIR')
 
     # --- For all of the subjects in the input directory ---
     # Get a list of subject IDs 
@@ -85,18 +73,16 @@ def main():
                 scanPath = os.path.join(anatPath, scan)
                 scanID = scan.split(".nii")[0]
 
-                preproc_script_path = os.path.join(os.path.dirname(__file__), 'ACPCAlignment_with_crop.sh')
-                scanWorkingDir = os.path.join(workingDir, subID, sesID, 'anat', scanID)
+                preproc_script_path = os.path.join(os.path.dirname(__file__), 'crop_scan.sh')
                 newScanPath = os.path.join(outDir, subID, sesID, 'anat')
                 # Create the new scan path directories
                 if not os.path.exists(newScanPath):
                     os.makedirs(newScanPath)
                 newScanPath = os.path.join(newScanPath, scan)
-                omat = os.path.join(workingDir, 'output_matrix.mat')
 
                 # Submit the job here
-                cmd = 'sbatch jobSingleScanPrepoc.sh '
-                cmd += scanWorkingDir + ' ' + scanPath + ' ' + newScanPath + ' ' + omat
+                cmd = 'sbatch jobSingleScanCrop.sh '
+                cmd += scanPath + ' ' + newScanPath 
                 os.system(cmd)
                 print("Submitted job for : ", scanID)
                 print()

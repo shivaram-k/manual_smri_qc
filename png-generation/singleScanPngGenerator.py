@@ -233,7 +233,7 @@ def main():
     outBase = args.out_dir
     segPath = args.der_fn
     isPreprocessed = args.preprocessed
-
+	
     scanID = scanPath.split("/")[-1].split(".nii")[0]
     # Make the output directory if it doesn't exist
     outDir = os.path.join(outBase, scanID)
