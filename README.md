@@ -34,6 +34,7 @@ pip install chardet
 conda install matplotlib
 ```
 ### II. Preprocessing 
+
 #### Part 1 : Check orientation
 The ACPC alignment code requires input scans to be in the LAS+ orientation. This script verifies whether the scans in the input directory meet this requirement. If they do not, the scans are reoriented, and their corresponding JSON files are updated accordingly.
 ```
@@ -77,7 +78,7 @@ python runPngGenerator -i /path/to/input/BIDS -o /path/to/output/directory [-d /
 
 Example - 
 ```
- python  runPngGenerator.py -i /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS 
+ python  runPngGenerator.py -i /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS-preprocessed-withACPC 
 						-o /home/<user>/QC 
 						-d /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/derivatives/synthseg+_robust_parc
 ```
