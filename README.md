@@ -33,22 +33,37 @@ conda install jupyter
 pip install chardet
 conda install matplotlib
 ```
-### II. Preprocessing (ACPC alignment and cropping)
-
-To perform ACPC alignment and cropping of MRI images, run the following commands :
+### II. Preprocessing 
+#### Part 1 : Check orientation
+The ACPC alignment code requires input scans to be in the LAS+ orientation. This script verifies whether the scans in the input directory meet this requirement. If they do not, the scans are reoriented, and their corresponding JSON files are updated accordingly.
 ```
-cd preprocessing
-python runAlignmentWithCrop.py -i /path/to/input/BIDS -o /path/to/output/base/directory -s /scr1/users/<user>
+cd preprocessing/check-orientation
+python runOrientationValidator.py -i /path/to/input/BIDS -o /path/to/output/base/directory
 ```
 Example - 
 ```
- python  runAlignmentWithCrop.py -i /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS 
+python runOrientationValidator.py -i /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS
+					-o /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol
+```
+Resulting output:
+1. `/mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS-reoriented` : LAS+ reoriented scans and updated JSONs in BIDS format. This directory should be the input for the next step.
+
+#### Part 2 : ACPC alignment and cropping
+
+To perform ACPC alignment and cropping of MRI images, run the following commands :
+```
+cd preprocessing/crop-with-ACPC
+python runAlignmentWithCrop.py -i /path/to/input/BIDS-reoriented -o /path/to/output/base/directory -s /scr1/users/<user>
+```
+Example - 
+```
+ python  runAlignmentWithCrop.py -i /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS-reoriented
 						-o /mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol
 						-s /scr1/users/myusernmame
 ```
 This results in the following output:
 
-1. `/mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS-preprocessed`: ACPC Aligned and cropped scans organized in the BIDS format. This directory should be the input for the next step.
+1. `/mnt/isilon/bgdlab_processing/Data/SLIP/slip_vsmol/BIDS-preprocessed-withACPC`: ACPC Aligned and cropped scans organized in the BIDS format. This directory should be the input for the next step.
 2. `/scr1/users/myusernmame/PNG-preprocessing`: Directory with intermediate files in the scratch space provided. Can be deleted once the jobs are completed.
 
 ### III. PNG Generation
