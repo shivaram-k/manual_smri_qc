@@ -92,7 +92,7 @@ def main():
                 if not os.path.exists(newScanPath):
                     os.makedirs(newScanPath)
                 newScanPath = os.path.join(newScanPath, scan)
-                omat = os.path.join(workingDir, 'output_matrix.mat')
+                omat = os.path.join(workingDir, subID, sesID, 'anat', 'output_matrix.mat')
 
                 # Submit the job here
                 cmd = 'sbatch jobSingleScanPrepoc.sh '
