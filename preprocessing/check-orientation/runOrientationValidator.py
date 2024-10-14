@@ -90,7 +90,7 @@ def main():
                 
                 with open(jsonPath, 'r') as jfile:
                     data = json.load(jfile)
-                    orientation = data["ImageOrientation"]
+                    orientation = data.get("ImageOrientation", None)
                     
                     if not orientation=="LAS+":
                         # If orientation is not LAS+ then reorient the scan and update json
